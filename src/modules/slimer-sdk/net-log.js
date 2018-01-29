@@ -488,8 +488,12 @@ TracingListener.prototype = {
             this.timer = null;
             this.timerCallback = null;
         }
-
-        this.originalListener.onStopRequest(request, context, statusCode);
+        try {
+            this.originalListener.onStopRequest(request, context, statusCode);
+        } catch(e) {
+            // loading may be aborted, so invalid request. let's do nothing in this case...
+            return;
+        }
         request = request.QueryInterface(Ci.nsIHttpChannel);
         let isFromWindow = this._inWindow(request);
         let isFileDownloaded = !isFromWindow && (request.loadFlags & Ci.nsIChannel.LOAD_RETARGETED_DOCUMENT_URI);
@@ -706,7 +710,7 @@ const traceRequest = function(id, request) {
     };
 
     let stream = request.QueryInterface(Ci.nsIUploadChannel).uploadStream;
-    if (stream && (request.requestMethod == 'POST' || request.requestMethod == 'PUT')) {
+    if (stream && (request.requestMethod == 'POST' || request.requestMethod == 'PUT' || request.requestMethod == 'PATCH')) {
         try {
             // QueryInterface throw an exception if stream is not a seekable stream
             stream.QueryInterface(Ci.nsISeekableStream);
